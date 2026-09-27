@@ -17,6 +17,7 @@ jobs:
           mkdir -p gazetteer
           for cc in CN KP MN; do
             curl --fail --location --retry 3 --max-time 180 "https://download.geonames.org/export/dump/${cc}.zip" -o "gazetteer/${cc}.zip"
+            curl --fail --location --retry 3 --max-time 180 "https://download.geonames.org/export/dump/alternatenames/${cc}.zip" -o "gazetteer/alternate-${cc}.zip"
           done
           curl --fail --location --retry 3 https://download.geonames.org/export/dump/readme.txt -o gazetteer/readme.txt
           cd gazetteer
