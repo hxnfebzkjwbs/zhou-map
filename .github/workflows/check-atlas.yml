@@ -1,0 +1,32 @@
+name: Check BC770 atlas
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check runtime and source rules
+        run: |
+          node --check web/data.js
+          node --check web/atlas.js
+          node --test tests/data.test.cjs
+      - name: Install browser test runner only
+        run: |
+          npm install --no-save --no-package-lock playwright@1.57.0
+          npx playwright install --with-deps chromium
+      - name: Verify importing, persistent cache, white land and mobile
+        run: node tests/browser.test.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bc770-browser-check
+          path: tests/browser-report.json
+          retention-days: 30
