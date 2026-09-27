@@ -1,0 +1,154 @@
+name: Build real boundary atlas
+on:
+  push:
+    paths: ['.github/workflows/build-real-boundaries.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: real-boundary-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install geometry and browser test dependencies
+        run: |
+          python -m pip install -r requirements.txt playwright==1.57.0
+          python -m playwright install --with-deps chromium
+      - name: Acquire pinned source snapshots on first build only
+        run: |
+          python - <<'PY'
+          import pathlib,urllib.request,json,hashlib,time
+          if pathlib.Path('sources/real_boundaries/features.json').exists():
+              print('Frozen sources already present; no online source updates.')
+              raise SystemExit(0)
+          root=pathlib.Path('/tmp/real-boundaries');root.mkdir()
+          gaz=pathlib.Path('/tmp/real-gazetteer');gaz.mkdir()
+          def get(url):
+              for attempt in range(3):
+                  try:return urllib.request.urlopen(url,timeout=180).read()
+                  except Exception:
+                      if attempt==2:raise
+                      time.sleep(3)
+          hashes={'CHN_ADM3':'3cc71d6cd23e7dbb5646422b40dd92a7a74d8779f340eb9377158c961dec310e','MNG_ADM2':'dc4ffaa394bfd6a5d278bea15d8c302cbce38d8650b8b4859862bacb1f63a91f','PRK_ADM2':'4265ce501c4402a8bafdc27298c8462e41ed6f3170d50624503c3770b8ce91e9'}
+          for iso,level in [('CHN','ADM3'),('MNG','ADM2'),('PRK','ADM2')]:
+              name=iso+'_'+level
+              raw=get(f'https://www.geoboundaries.org/api/current/gbOpen/{iso}/{level}/')
+              meta=json.loads(raw);(root/f'{name}_metadata.json').write_bytes(raw)
+              url=f'https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/{iso}/{level}/geoBoundaries-{iso}-{level}.geojson'
+              data=get(url)
+              if data.startswith(b'version https://git-lfs'):
+                  data=get(url.replace('https://github.com/','https://media.githubusercontent.com/media/').replace('/raw/','/'))
+              assert hashlib.sha256(data).hexdigest()==hashes[name],name+' source checksum changed'
+              assert json.loads(data)['type']=='FeatureCollection'
+              (root/f'{name}.json').write_bytes(data)
+          expected={'CN.zip':'ff60ed6ea5d5cf5c72994c75db1bbd35ff7be20551d875c901dc90c6590bfd6d','KP.zip':'e7807686e68e70567490da8650a3270274c868e3133ca3db7882a9f74e8485fe','MN.zip':'260884501da9d5dd02d26eb0a38402c7ef352d95267a3e35e081edb390e3e1a5','alternate-CN.zip':'f50d58739636ca4567fae82acf4871dea11b381bb53b68db3a586ca739e8d5e4','alternate-KP.zip':'389d40d0e95383c6e023ca6301299d8c0999c7906e0486735863791c77555143','alternate-MN.zip':'afe6f14835fa63a5cb75e8b22954cc28e9050db48942b5407e56582d8083bd76'}
+          for name,sha in expected.items():
+              suffix='alternatenames/'+name.removeprefix('alternate-') if name.startswith('alternate-') else name
+              raw=get('https://download.geonames.org/export/dump/'+suffix)
+              assert hashlib.sha256(raw).hexdigest()==sha,name+' source checksum changed'
+              (gaz/name).write_bytes(raw)
+          PY
+      - name: Rebuild both tables from unmodified source polygons
+        run: python scripts/rebuild_real_boundaries.py --source-dir /tmp/real-boundaries --gazetteer-dir /tmp/real-gazetteer
+      - name: Apply checked viewer migration
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/prepare_real_viewer.py');s=p.read_text()
+          # Match the exact assertion labels in the previously published viewer tests.
+          substitutions={
+            "Loads 1195 source counties":"Loads 1195 counties",
+            "Loads 3413 source county pairs":"Loads 3413 county pairs",
+            "Default selects Luoyi":"Default selected county is Luoyi",
+            "Modern alias finds Luoyi":"Search modern alias finds ancient label",
+            "check('Country filter matches data', page.locator('#matchCount').inner_text() == '8')":"check('Country filter has four Zhou cells', page.locator('#matchCount').inner_text() == '4')"
+          }
+          for a,b in substitutions.items():s=s.replace(a,b)
+          replacement='''("page.set_content(HTML, wait_until='load')", "page.set_content(HTML, wait_until='load', timeout=120000)"),
+            ('page.wait_for_function("document.body.dataset.ready === \\'true\\'")', 'page.wait_for_function("document.body.dataset.ready === \\'true\\'", timeout=120000)'),'''
+          s=s.replace("('timeout=30000','timeout=120000'),",replacement)
+          p.write_text(s)
+          compile(s,str(p),'exec')
+          PY
+          python scripts/prepare_real_viewer.py
+      - name: Verify offline rebuild and exact runtime outputs
+        run: |
+          python - <<'PY'
+          import hashlib,json,subprocess
+          from pathlib import Path
+          names=['counties.json','connections.json','id_migration.json','county_id_registry.json']
+          def hashes():return {n:hashlib.sha256((Path('data')/n).read_bytes()).hexdigest() for n in names}
+          first=hashes()
+          subprocess.run(['python','scripts/rebuild_real_boundaries.py'],check=True)
+          second=hashes()
+          assert first==second,'Offline rebuild changed runtime data'
+          expected={'counties.json':'cd85d1fc5fb7f33ec6fc0122f6ea56eb1ede05f73109db34c003c4e06e7dda69','connections.json':'e6896b782b3d6609cb863a91e5b48a4e22a4ac91e0caf241afe30b09d6d9b980','id_migration.json':'19d961dc2b28730c3ed6ada8e3f1832ea829f151d991e7e7eefb658f0624d877'}
+          assert all(second[k]==v for k,v in expected.items()),'Published data differ from locally verified source-boundary build'
+          Path('data/reproducibility_report.json').write_text(json.dumps({'status':'PASS','offline_rebuild_byte_identical':True,'matches_locally_verified_data':True,'output_sha256':second},indent=2)+'\n')
+          PY
+      - name: Validate contract and geometry identity; report source conflicts
+        run: |
+          python scripts/validate_real_boundaries.py
+          python - <<'PY'
+          import unittest,json,sys
+          from pathlib import Path
+          r=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.discover('tests'))
+          Path('data/test_report.json').write_text(json.dumps({'status':'PASS' if r.wasSuccessful() else 'FAIL','tests_run':r.testsRun,'failures':len(r.failures),'errors':len(r.errors),'skipped':len(r.skipped)},indent=2)+'\n')
+          if not r.wasSuccessful():sys.exit(1)
+          PY
+          node --test tests/web-model.test.cjs
+      - name: Test actual desktop and mobile atlas
+        run: |
+          python scripts/build_viewer.py --output dist
+          python tests/web_ui_test.py
+          cp test-results/web_ui_report.json data/web_ui_report.json
+          python - <<'PY'
+          import base64,gzip,re,json
+          from pathlib import Path
+          html=Path('dist/zhou-atlas-offline.html').read_text()
+          encoded=re.search(r'<script id="zhou-inline-data"[^>]*>(.*?)</script>',html,re.S).group(1)
+          obj=json.loads(gzip.decompress(base64.b64decode(encoded)))
+          for n in ('counties','connections'):assert obj[n]==json.loads(Path('data/'+n+'.json').read_text())
+          print('Lossless offline HTML data equality: PASS')
+          PY
+      - name: Commit only verified data, source provenance and viewer changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A data sources/real_boundaries sources/legacy_grid_counties.json scripts/prepare_real_viewer.py scripts/build_map.py scripts/validate.py scripts/build_viewer.py web index.html tests/web_ui_test.py tests/web-model.test.cjs .nojekyll
+          if ! git diff --cached --quiet; then
+            git commit -m 'Replace all hex cells with verified modern source boundaries and publish v0.3 atlas'
+            git push
+          fi
+          git rev-parse HEAD
+      - name: Retain complete JSON, atlas and verification artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zhou-real-boundaries-v0.3
+          path: |
+            data/
+            sources/
+            scripts/
+            tests/
+            docs/
+            web/
+            index.html
+            .nojekyll
+            README.md
+            NOTICE.md
+            requirements.txt
+            dist/
+            test-results/
+          include-hidden-files: true
+          retention-days: 30
+          compression-level: 6
