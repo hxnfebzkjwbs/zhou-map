@@ -115,7 +115,9 @@
         if (terrain && c['地形'] !== terrain) return false;
         if (resource && (resource === '__none' ? c['自然资源'].length !== 0 : !c['自然资源'].includes(resource))) return false;
         const modern = c['资料依据']?.['地名考证']?.['现代参考名'] || '';
-        return !q || [c['县编号'], c['县名'], modern].some(v => v.toLocaleLowerCase().includes(q));
+        const aliases = (c['资料依据']?.['历史地点'] || []).map(x => x.name);
+        const original = c['资料依据']?.['边界依据']?.['来源名称'] || '';
+        return !q || [c['县编号'], c['县名'], modern, original, ...aliases].some(v => v.toLocaleLowerCase().includes(q));
       });
     }
     return { counties, connections, byId, incident, neighbors, graph, route, search };

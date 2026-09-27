@@ -96,6 +96,9 @@ def route_graph(counties,edges,mode):
     return g
 
 if __name__=='__main__':
+    if read('data/manifest.json').get('version')=='v0.3-real-boundaries':
+        from validate_real_boundaries import main
+        main();sys.exit(0)
     try:
         result=validate(read('data/counties.json'),read('data/connections.json'),shape(read('sources/playable_land.geojson')['geometry']))
         write('data/validation_report.json',result)

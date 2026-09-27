@@ -1,16 +1,16 @@
 {
   "status": "PASS",
-  "county_count": 1195,
-  "renamed_count": 1190,
-  "all_non_name_fields_unchanged": true,
-  "connections_byte_identical_to_v01": true,
   "offline_rebuild_byte_identical": true,
+  "matches_locally_verified_data": true,
   "output_sha256": {
-    "counties.json": "5306961969b1e825d3ca2c69dcb6103d4feef862d384407dea84ab0b0c3b3ae0",
-    "connections.json": "ed166908aa770ac5ba1196a49c3f399f94dac2a302415e6b50a8fec2de04a7d2",
-    "counties.geojson": "0f51a783fe00ae543c1a54ae80791c54a44b4901f0331672980258a6dfcc9d6c",
-    "县表.csv": "c4b9ebba63ff0164ec973d5f366ac80727f93e7d5d083e107c9b33ea36e52cc5",
-    "县际距离表.csv": "ace5a027f9c82f1b1fd179a3db1fdb9ffa28e10a2280012313c2135afdc25174",
-    "name_changes.csv": "cb6e78cececc2ba62f25ce716b17fc2648fd4d20713609623dc3d1511ff490d5"
+    "counties.json": "cd85d1fc5fb7f33ec6fc0122f6ea56eb1ede05f73109db34c003c4e06e7dda69",
+    "connections.json": "e6896b782b3d6609cb863a91e5b48a4e22a4ac91e0caf241afe30b09d6d9b980",
+    "id_migration.json": "19d961dc2b28730c3ed6ada8e3f1832ea829f151d991e7e7eefb658f0624d877",
+    "county_id_registry.json": "d272acf86a898cdb2872dfa19a7963ff7bb647a23a4aa33f112cfacf15e4d64a"
+  },
+  "expected_sha256": {
+    "counties.json": "cd85d1fc5fb7f33ec6fc0122f6ea56eb1ede05f73109db34c003c4e06e7dda69",
+    "connections.json": "e6896b782b3d6609cb863a91e5b48a4e22a4ac91e0caf241afe30b09d6d9b980",
+    "id_migration.json": "19d961dc2b28730c3ed6ada8e3f1832ea829f151d991e7e7eefb658f0624d877"
   }
 }

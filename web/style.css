@@ -7,3 +7,6 @@
 /* Readable secondary text without relying on colour alone. */
 .metric-label,.facts dt,.land-row,.land-row .land-label,.coordinates-card span{font-size:10px}.metric-unit,.land-row small,.balanced{font-size:10px}.source-card p,.source-card a{font-size:11px}.edge-values{font-size:10px}.section-title h2{font-size:13px}.map-metrics span{font-size:9px}.map-topline p{font-size:11px}.legend-item{font-size:11px}.legend-note{font-size:10px}.map-bottom{font-size:9px}.source-card{line-height:1.9}.model-callout{font-size:10px}.county-row small{font-size:10px}.detail-tabs button{font-size:12px}
 @media(max-width:700px){.map-bottom{font-size:8px}.legend-item,.legend-note{font-size:9px}.map-topline p{font-size:10px}}
+
+/* REAL BOUNDARY PROVENANCE */
+.boundary-layer{grid-column:1/-1}.boundary-card{border-left:3px solid #687e63;margin-top:0;background:#edf2e6}.source-attribution a{color:inherit;text-decoration:underline;text-underline-offset:2px}.map-bottom .source-attribution{font-size:10px;white-space:normal;text-align:right}.county-meta>span{font-size:10px}.version{white-space:nowrap}

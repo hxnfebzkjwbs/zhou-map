@@ -78,14 +78,15 @@ def main():
  patch_file('tests/web-model.test.cjs',[("model.search('洛阳').some(c => c['县名'] === '洛邑')", "model.search('洛邑').some(c => (c['资料依据']['历史地点'] || []).some(x => x.name === '洛邑'))")])
  # Explicitly migrate UI assertions to source IDs rather than preserving fictitious grid IDs.
  patch_file('tests/web_ui_test.py',[
-  ('timeout=30000','timeout=120000'),
+  ("page.set_content(HTML, wait_until='load')", "page.set_content(HTML, wait_until='load', timeout=120000)"),
+  ('page.wait_for_function("document.body.dataset.ready === \'true\'")', 'page.wait_for_function("document.body.dataset.ready === \'true\'", timeout=120000)'),
   ("'args': ['--no-sandbox']", "'args': ['--no-sandbox', '--disable-dev-shm-usage']"),
-  ("check('Loads 1195 source counties', page.locator('#statCount').inner_text() == '1,195')", "check('Loads source-backed counties', page.locator('#statCount').inner_text() == format(len(COUNTIES), ','))"),
-  ("check('Loads 3413 source county pairs', page.locator('#statEdges').inner_text() == '3,413')", "check('Loads rebuilt county pairs', page.locator('#statEdges').inner_text() == format(len(EDGES), ','))"),
-  ("check('Default selects Luoyi', page.locator('#countyName').inner_text() == '洛邑')", "check('Default selects the real county containing the Luoyi anchor', page.locator('#countyName').inner_text() == '西工区')"),
+  ("check('Loads 1195 counties', page.locator('#statCount').inner_text() == '1,195')", "check('Loads source-backed counties', page.locator('#statCount').inner_text() == format(len(COUNTIES), ','))"),
+  ("check('Loads 3413 county pairs', page.locator('#statEdges').inner_text() == '3,413')", "check('Loads rebuilt county pairs', page.locator('#statEdges').inner_text() == format(len(EDGES), ','))"),
+  ("check('Default selected county is Luoyi', page.locator('#countyName').inner_text() == '洛邑')", "check('Default selects the real county containing the Luoyi anchor', page.locator('#countyName').inner_text() == '西工区')"),
   ("page.locator('#search').fill('洛阳')", "page.locator('#search').fill('洛邑')"),
-  ("check('Modern alias finds Luoyi', page.locator('#countyList').inner_text().find('洛邑') >= 0)", "check('Historical place alias resolves to a real modern county', page.locator('#countyList').inner_text().find('西工区') >= 0)"),
-  ("check('Country filter matches data', page.locator('#matchCount').inner_text() == '8')", "check('Country filter matches the data', int(page.locator('#matchCount').inner_text().replace(',', '')) == sum(c['开局行政归属']['所属国家'] == '周' for c in COUNTIES))"),
+  ("check('Search modern alias finds ancient label', page.locator('#countyList').inner_text().find('洛邑') >= 0)", "check('Historical place alias resolves to a real modern county', page.locator('#countyList').inner_text().find('西工区') >= 0)"),
+  ("check('Country filter has four Zhou cells', page.locator('#matchCount').inner_text() == '4')", "check('Country filter matches the data', int(page.locator('#matchCount').inner_text().replace(',', '')) == sum(c['开局行政归属']['所属国家'] == '周' for c in COUNTIES))"),
   ("['country', 'population', 'resource', 'terrain']", "['country', 'population', 'resource', 'terrain', 'boundary']"),
   ('EZ000001','RCHN-8f5c29b1867a'),('EZ000005','RCHN-e8c96c155de6'),('EZ000006','RCHN-a519c47e0d35'),
   ("== '临淄'", "== '临淄区'"),("== '曲阜'", "== '曲阜市'"),

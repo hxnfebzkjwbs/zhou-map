@@ -31,7 +31,7 @@ test('Cart route excludes paths that cannot take carts', () => { const m = M.cre
 test('Land and water never auto-transfer', () => { const m = M.create(tiny(), [edge('A', 'B', 2, '能走车'), edge('B', 'C', null, null, 3)]); assert.equal(m.route('A', 'C', 'land'), null); assert.equal(m.route('A', 'C', 'water'), null); });
 test('No path returns null; same county returns zero path, not a zero edge', () => { const m = M.create(tiny(), []); assert.equal(m.route('A', 'C', 'cart'), null); assert.deepEqual(m.route('A', 'A', 'water'), { ids: ['A'], steps: [], distance: 0, mode: 'water' }); });
 test('Unknown route nodes/modes rejected', () => { assert.throws(() => model.route('missing', counties[0]['县编号'], 'land')); assert.throws(() => model.route(counties[0]['县编号'], counties[0]['县编号'], 'mixed')); });
-test('Modern reference names remain searchable', () => assert.ok(model.search('洛阳').some(c => c['县名'] === '洛邑')));
+test('Modern reference names remain searchable', () => assert.ok(model.search('洛邑').some(c => (c['资料依据']['历史地点'] || []).some(x => x.name === '洛邑'))));
 test('Filters preserve null country meaning', () => assert.ok(model.search('', '__none').every(c => c['开局行政归属']['所属国家'] === null)));
 test('All resources and terrain filters use source values', () => { assert.ok(model.search('', '', '', '铜矿').every(c => c['自然资源'].includes('铜矿'))); assert.ok(model.search('', '', '山地').every(c => c['地形'] === '山地')); });
 test('Projection roundtrip, including farthest corners', () => { for (const p of [[101.5, 24.5], [112.43, 34.67], [126, 43.2]]) { const q = M.unproject(M.project(p)); assert.ok(Math.abs(q[0] - p[0]) < 1e-8); assert.ok(Math.abs(q[1] - p[1]) < 1e-8); } });

@@ -260,8 +260,6 @@ def build():
     return counties,edges,county_geoms,domain
 
 if __name__=='__main__':
-    try:
-        c,e,_,_=build()
-        print(f'Built {len(c)} counties and {len(e)} direct connections; explicitly synthetic prototype.')
-    except Exception as exc:
-        print(f'Build failed: {exc}',file=sys.stderr); raise
+    # Legacy grid build retired; shared numerical helpers remain importable.
+    from rebuild_real_boundaries import build
+    build()

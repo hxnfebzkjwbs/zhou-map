@@ -1,0 +1,14 @@
+{
+  "version": "v0.3",
+  "output_sha256": {
+    "index.html": "bfbc4b97b54a9f15577120f6513253c59b282d5a94349ffa7b176c7106e98392",
+    "web/app.js": "ac1ca9f1e32fa2f193d0589191336efe626cf5b97bf831b2ba28d8c72fc7d181",
+    "web/model.js": "889e4cb95bd81fe8ca16b40e76ea7aa0bf95b930737f39ef64d433ed53a6055a",
+    "web/style.css": "cddf014e058b1cf566dd930dd7037f32218853c664b474b448c9e5a5e5f925c0",
+    "scripts/build_viewer.py": "e27b49c7e1cc15aaaabbbfb4fec0c78d7b2939f2a1ac09d8a5524b498e6a2ba8",
+    "scripts/build_map.py": "5f2aee7965d79ea9d13f41ab63fd25c7c6d5eef1cbd98ce876ba913964d9db06",
+    "scripts/validate.py": "8afc5e942143797d605eda75ebfb0163e9b199a7b26474d5e2c66907053c370b",
+    "tests/web_ui_test.py": "da7cc07a38d47028372427d7550e21748e338ee3e3851fc8367105802fc56454",
+    "tests/web-model.test.cjs": "8f293893dbdf6b9609aca8cb2cb314b1b7bdd69a1d076035d86fed73ed48d753"
+  }
+}

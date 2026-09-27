@@ -10,11 +10,11 @@
   const LAND_COLORS = ['#acb782', '#d6c59d', '#c6d3a4', '#96b69b', '#577b62', '#9e9b8a', '#d0d8c4'];
   const COUNTRY_COLORS = ['#e1c698', '#95b9b9', '#c3b59a', '#a5b396', '#cbaaa0', '#adc4d0', '#c6c5a2', '#b3b4cb', '#8fac99', '#d5c197', '#b1c0a0', '#acc2bb'];
   const POP_COLORS = ['#e1e5cd', '#c3d7c2', '#8dbab0', '#5f9d9e', '#356f81'];
-  const state = { layer: 'terrain', selected: null, hovered: null, detail: 'overview', route: null, routeView: false, matches: [], matched: new Set(), listLimit: 60, transform: { k: .2, x: 0, y: 0 }, initialK: .2, drawing: false, width: 0, height: 0, dpr: 1 };
+  const state = { layer: 'boundary', selected: null, hovered: null, detail: 'overview', route: null, routeView: false, matches: [], matched: new Set(), listLimit: 60, transform: { k: .2, x: 0, y: 0 }, initialK: .2, drawing: false, width: 0, height: 0, dpr: 1 };
   let model, features = [], byFeature = new Map(), countryColors = new Map(), selectedEdges = [], allBounds;
   const canvas = $('map'), ctx = canvas.getContext('2d'), hitCtx = document.createElement('canvas').getContext('2d');
   const modeNames = { land: '陆路', cart: '车行', water: '水路' };
-  const layerNames = { terrain: '地形视图', country: '开局国家', population: '人口密度', resource: '资源分布' };
+  const layerNames = { boundary: '真实县界', terrain: '游戏地形', country: '开局国家', population: '人口密度', resource: '资源分布' };
   let toastTimer;
   function toast(text) { $('toast').textContent = text; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('toast').hidden = true; }, 3200); }
   function safeUrl(value) { try { const u = new URL(value); return ['https:', 'http:'].includes(u.protocol) ? u.href : null; } catch { return null; } }
@@ -22,12 +22,13 @@
   function displayName(c) { return c['县名'] + ' · ' + c['县编号']; }
   function selectedCounty() { return model?.byId.get(state.selected); }
   function evidence(c) { return c['资料依据']?.['地名考证'] || {}; }
-  function nameType(c) { return evidence(c)['名称类型']?.includes('古名') ? '有据古名' : '现代回退名'; }
+  function nameType(c) { return '现代县界 · ' + (c['资料依据']?.['边界依据']?.['边界年代'] || '年份未录'); }
   function ownerName(c) { return c['开局行政归属']['所属国家'] ?? '未分配'; }
   function density(c) { return c['初始人口'] / (c['总面积'] / 100); }
   function popBin(c) { const d = density(c); return d < 1 ? 0 : d < 3 ? 1 : d < 6 ? 2 : d < 10 ? 3 : 4; }
   function resourceCategory(c) { const r = c['自然资源']; return r.some(x => !['石料', '陶土'].includes(x)) ? 3 : r.includes('陶土') ? 2 : r.includes('石料') ? 1 : 0; }
   function fill(c) {
+    if (state.layer === 'boundary') return c['资料依据']?.['边界依据']?.['来源层级'] === 'PRK_ADM2' ? '#d2dfdb' : '#dbe4cf';
     if (state.layer === 'terrain') return TERRAIN[c['地形']];
     if (state.layer === 'country') return countryColors.get(c['开局行政归属']['所属国家']) || '#d5dccb';
     if (state.layer === 'population') return POP_COLORS[popBin(c)];
@@ -98,9 +99,9 @@
   function drawLabels() {
     if (!$('showNames').checked) return;
     const occupied = [], k = state.transform.k;
-    const list = features.filter(f => visible(f) && state.matched.has(f.id)).sort((a, b) => (b.id === state.selected) - (a.id === state.selected) || Number(b.id.startsWith('EZ000')) - Number(a.id.startsWith('EZ000')) || b.c['初始人口'] - a.c['初始人口']);
+    const list = features.filter(f => visible(f) && state.matched.has(f.id)).sort((a, b) => (b.id === state.selected) - (a.id === state.selected) || Number(!!b.c['资料依据']?.['历史地点']?.length) - Number(!!a.c['资料依据']?.['历史地点']?.length) || b.c['初始人口'] - a.c['初始人口']);
     for (const f of list) {
-      const sel = f.id === state.selected, anchor = f.id.startsWith('EZ000');
+      const sel = f.id === state.selected, anchor = !!f.c['资料依据']?.['历史地点']?.length;
       const width = (f.bbox[2] - f.bbox[0]) * k;
       if (!sel && width < (anchor ? 12 : 50)) continue;
       const [x, y] = screen(f.point);
@@ -151,6 +152,7 @@
   }
   function legend() {
     let items, title = layerNames[state.layer], note = '';
+    if (state.layer === 'boundary') { items = [['#dbe4cf', '中国县级 · 2017'], ['#d2dfdb', '朝鲜县级 · 2019']]; note = '原始行政边界资料 · 未生成网格 · 非前770年县界'; }
     if (state.layer === 'terrain') items = M.TERRAINS.map(t => [TERRAIN[t], `${TERRAIN_MARK[t]} ${t}`]);
     if (state.layer === 'population') { items = POP_COLORS.map((c, i) => [c, ['< 1', '1–<3', '3–<6', '6–<10', '≥ 10'][i]]); note = '单位：人 / 平方公里 · 模型人口'; }
     if (state.layer === 'resource') { items = ['未配置', '石料', '陶土', '其他矿源'].map((t, i) => [['#dbe2d2', '#a9baa8', '#c5bb91', '#ab985e'][i], t]); note = '多资源按矿源优先着色，完整资源见详情'; }
@@ -178,7 +180,7 @@
     state.matches = model.search($('search').value, $('countryFilter').value, $('terrainFilter').value, $('resourceFilter').value);
     state.matched = new Set(state.matches.map(c => c['县编号']));
     $('matchCount').textContent = nf.format(state.matches.length); $('visibleCount').textContent = nf.format(state.matches.length);
-    const own = $('countryFilter').value; $('mapTitle').textContent = own ? own === '__none' ? '未分配地区' : own + ' · 剧本地区' : '东周全域';
+    const own = $('countryFilter').value; $('mapTitle').textContent = own ? own === '__none' ? '未分配地区' : own + ' · 剧本地区' : '东周游戏范围';
     renderList(); legend(); drawSoon();
   }
   function renderDetail() {
@@ -187,11 +189,11 @@
     const body = $('detailBody');
     if (state.detail === 'overview') {
       const land = c['初始土地用途'], total = c['总面积'];
-      body.innerHTML = `<div class="metric-duo"><div><span class="metric-label">初始人口 · 模型</span><b class="metric-value">${fmt(c['初始人口'])}<span class="metric-unit">人</span></b></div><div><span class="metric-label">总面积</span><b class="metric-value area">${fmt(total, 2)}</b><div class="metric-unit" style="margin:5px 0 0">公顷</div></div></div>
+      body.innerHTML = `<section class="source-card boundary-card"><h3>边界资料 · ${esc(c['资料依据']['边界依据']['边界年代'])}</h3><p>${esc(c['资料依据']['边界依据']['来源名称'])} · 原始多边形</p><p>保留源轮廓，不裁切、不改成网格。不是前770年县界。</p></section><div class="metric-duo"><div><span class="metric-label">初始人口 · 模型</span><b class="metric-value">${fmt(c['初始人口'])}<span class="metric-unit">人</span></b></div><div><span class="metric-label">总面积</span><b class="metric-value area">${fmt(total, 2)}</b><div class="metric-unit" style="margin:5px 0 0">公顷</div></div></div>
         <dl class="facts"><div><dt>开局国家</dt><dd>${esc(ownerName(c))}</dd></div><div><dt>所属郡</dt><dd>${esc(c['开局行政归属']['所属郡'] ?? '未设置')}</dd></div><div><dt>主要地形</dt><dd>${esc(TERRAIN_MARK[c['地形']])} ${esc(c['地形'])}</dd></div><div><dt>模型人口密度</dt><dd>${fmt(density(c), 1)} <span class="metric-unit">人/km²</span></dd></div></dl>
         <div class="coordinates-card">${icon('pin')}<div><span>游戏治所坐标 · WGS84</span><b>${coords(c)}</b></div></div>
         <section class="detail-section"><h3>初始土地用途 <small>单位 / 公顷</small></h3><div class="land-stack" aria-hidden="true">${M.LAND.map((key, i) => `<span style="width:${land[key] / total * 100}%;background:${LAND_COLORS[i]}"></span>`).join('')}</div>${M.LAND.map((key, i) => `<div class="land-row"><span class="land-label"><i class="swatch" style="background:${LAND_COLORS[i]}"></i>${key}</span><strong>${fmt(land[key], 2)}</strong><small>${fmt(land[key] / total * 100, 1)}%</small></div>`).join('')}<div class="balanced">七类面积合计 ${fmt(total, 2)} 公顷</div></section>
-        <section class="detail-section"><h3>自然资源 <small>不记录储量</small></h3><div class="resource-pills">${c['自然资源'].length ? c['自然资源'].map(r => `<span>◇ ${esc(r)}</span>`).join('') : '<span>未配置资源</span>'}</div></section><div class="model-callout">县界、人口、土地及归属沿用游戏模型。现代参考地名不是古代治所的证明。</div>`;
+        <section class="detail-section"><h3>自然资源 <small>不记录储量</small></h3><div class="resource-pills">${c['自然资源'].length ? c['自然资源'].map(r => `<span>◇ ${esc(r)}</span>`).join('') : '<span>未配置资源</span>'}</div></section><div class="model-callout">县界来自注明年份的真实行政资料，未生成网格。人口、土地、地形、归属与道路仍为游戏模型，不能视为前770年实测数据。</div>`;
     } else if (state.detail === 'connections') {
       const ns = model.neighbors(state.selected), outbound = ns.filter(n => n.outbound !== null).length;
       body.innerHTML = `<div class="connection-count">${ns.length} 个直接相连的县 · ${outbound} 条出向水路<br>所有方向均以「${esc(c['县名'])}」为当前县。空值显示为无通道。</div>${ns.map(n => `<button class="connection-card" data-select="${esc(n.county['县编号'])}"><header><h3>${esc(n.county['县名'])}</h3><span>↗</span></header><div class="edge-id">${esc(n.county['县编号'])}</div><div class="edge-values"><span>陆路 · ${n.land === null ? '无通道' : fmt(n.land, 3) + ' km · ' + esc(n.type)}</span><span class="water">水路 出 → ${n.outbound === null ? '无通道' : fmt(n.outbound, 3) + ' km'}</span><span class="water">水路 入 ← ${n.inbound === null ? '无通道' : fmt(n.inbound, 3) + ' km'}</span></div></button>`).join('')}`;
@@ -237,14 +239,14 @@
   function closeDrawers() { $('sidebar').classList.remove('open'); $('inspector').classList.remove('open'); $('drawerShade').hidden = true; syncDrawers(); }
   function showModal(title, html, eyebrow = 'ZHOU ATLAS · DATA') { $('modalTitle').textContent = title; $('modalEyebrow').textContent = eyebrow; $('modalBody').innerHTML = html; $('modal').showModal(); }
   function about() {
-    showModal('一张可检查的游戏地图', `<span class="badge-subtle">公元前 770 年 · v0.2-named 数据</span><p>地图展示当前两张基础表中的 ${fmt(model.counties.length)} 个游戏分区和 ${fmt(model.connections.length)} 对直接连接。底层不依赖在线底图，也不请求地图平台或外部字体。</p><h3>读图之前</h3><p>县界为游戏分区，不是古县界。开局国家、人口、土地、粗略地形及交通仍是模型配置；未分配国家不表示无人居住。现代地名仅作为查不到古名时的回退标签。海岸与设计外框不应视为已经考定的东周疆域。</p><h3>连接与路程</h3><p>实线水路、虚线陆路，选中县的连接会加深。地图连线仅连接游戏治所，不是古代路线几何。距离始终读取 JSON：陆路双向共用，水路按方向分别读取。最短路径只在所选通行模式内计算，不自动换乘。</p><p><code>null</code> 意味着没有通道，不是零公里。起终点为同一个县时，寻路总程可以为零；这不在距离表中创造零距离边。</p><h3>两张表直接驱动</h3><p><code>data/counties.json</code>：完整县记录及资料依据。<br><code>data/connections.json</code>：直接相连县对、陆路类型和方向性水路距离。</p><p>网页只读，不修改源数据。筛选只影响显示，不改变全图最短路的计算网络。人口密度以人口除以县面积计算；面积单位为公顷，密度单位为人 / 平方公里。</p><h3>资料与使用</h3><p>每县「资料依据」保留地名来源和游戏假设。现代地名来自 <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>，遵循 <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>。县界沿用的 Natural Earth 低分辨率陆地参考为公有领域，具体处理说明保存在仓库 NOTICE.md。</p><p><a href="https://github.com/hxnfebzkjwbs/zhou-map" target="_blank" rel="noopener noreferrer">查看 GitHub 源代码与数据 ↗</a></p><h3>操作</h3><p>拖动平移，滚轮或双指缩放。点击县，或用左侧地名索引选择。键盘 / 聚焦搜索，地图获得焦点后方向键平移、+ / − 缩放、Home 回全图。窄屏使用底部按钮打开筛选与详情。</p>`);
+    showModal('一张可检查的游戏地图', `<span class="badge-subtle">游戏开局前770年 · v0.3 真实现代县界资料</span><p>地图展示当前两张基础表中的 ${fmt(model.counties.length)} 个游戏分区和 ${fmt(model.connections.length)} 对直接连接。底层不依赖在线底图，也不请求地图平台或外部字体。</p><h3>读图之前</h3><p>县界直接取自 geoBoundaries 整理的真实现代行政区资料：中国部分代表2017年，朝鲜部分代表2019年。未生成六边形、未随机扰动、未裁切县域。它们不是前770年县界，也不是官方勘界认证。开局国家、人口、土地、粗略地形及交通仍是模型配置；未分配国家不表示无人居住。现代地名仅作为查不到古名时的回退标签。保留与旧地图范围相交的完整县域，因此边缘不会再被旧外框切成直线。来源之间存在12对跨境重叠，合计约13.595平方公里，已单独记录；未用虚构边界填平误差。原设计范围与这些现代资料也并不完全重合。</p><h3>连接与路程</h3><p>实线水路、虚线陆路，选中县的连接会加深。地图连线仅连接游戏治所，不是古代路线几何。距离始终读取 JSON：陆路双向共用，水路按方向分别读取。最短路径只在所选通行模式内计算，不自动换乘。</p><p><code>null</code> 意味着没有通道，不是零公里。起终点为同一个县时，寻路总程可以为零；这不在距离表中创造零距离边。</p><h3>两张表直接驱动</h3><p><code>data/counties.json</code>：完整县记录及资料依据。<br><code>data/connections.json</code>：直接相连县对、陆路类型和方向性水路距离。</p><p>网页只读，不修改源数据。筛选只影响显示，不改变全图最短路的计算网络。人口密度以人口除以县面积计算；面积单位为公顷，密度单位为人 / 平方公里。</p><h3>资料与使用</h3><p>每县「资料依据」保留地名来源和游戏假设。现代地名来自 <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>，遵循 <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>。中国边界来自 OpenStreetMap，经 geoBoundaries 整理，适用 ODbL 1.0；朝鲜边界来源为 WFP/OCHA，适用 CC BY 3.0 IGO。边界数据库的署名、许可及来源版本保存在每县资料依据与 NOTICE.md。新县ID不能直接代替旧六边形ID，迁移表只提供空间对应参考。</p><p><a href="https://github.com/hxnfebzkjwbs/zhou-map" target="_blank" rel="noopener noreferrer">查看 GitHub 源代码与数据 ↗</a></p><h3>操作</h3><p>拖动平移，滚轮或双指缩放。点击县，或用左侧地名索引选择。键盘 / 聚焦搜索，地图获得焦点后方向键平移、+ / − 缩放、Home 回全图。窄屏使用底部按钮打开筛选与详情。</p>`);
   }
   function download(name, value) {
     const blob = new Blob([JSON.stringify(value, null, 2) + '\n'], { type: 'application/json;charset=utf-8' }), url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   function exportDialog() {
-    showModal('JSON 数据', `<p>完整数据只提供两张 JSON 表。下载不会应用地图筛选，不改写县编号或 <code>null</code>。</p><div class="export-row"><div><h3>县表</h3><p>${fmt(model.counties.length)} 条 · 完整字段、县界与资料依据</p></div><button class="button primary" data-download="counties">${icon('download')} counties.json</button></div><div class="export-row"><div><h3>县际距离表</h3><p>${fmt(model.connections.length)} 对 · 包含方向性水路</p></div><button class="button outline" data-download="connections">${icon('download')} connections.json</button></div><div class="export-row"><div><h3>当前县 · ${esc(selectedCounty()['县名'])}</h3><p>${esc(state.selected)} · 单个完整 JSON 对象</p></div><button class="button outline" data-download="selected">下载本县</button></div><p>下载包含 GeoNames 派生地名时，应保留来源署名与 CC BY 4.0 许可说明。县内已有逐条溯源网址。</p>`);
+    showModal('JSON 数据', `<p>完整数据只提供两张 JSON 表。下载不会应用地图筛选，不改写县编号或 <code>null</code>。</p><div class="export-row"><div><h3>县表</h3><p>${fmt(model.counties.length)} 条 · 完整字段、县界与资料依据</p></div><button class="button primary" data-download="counties">${icon('download')} counties.json</button></div><div class="export-row"><div><h3>县际距离表</h3><p>${fmt(model.connections.length)} 对 · 包含方向性水路</p></div><button class="button outline" data-download="connections">${icon('download')} connections.json</button></div><div class="export-row"><div><h3>当前县 · ${esc(selectedCounty()['县名'])}</h3><p>${esc(state.selected)} · 单个完整 JSON 对象</p></div><button class="button outline" data-download="selected">下载本县</button></div><p>边界派生数据库按 ODbL 1.0 提供；保留 OpenStreetMap / geoBoundaries 署名及 WFP/OCHA、GeoNames 各自来源许可。县内有逐条溯源网址；不是前770年真实县界。</p>`);
   }
   function countyJSON() {
     showModal(selectedCounty()['县名'] + ' · 原始记录', '<p>以下为县表中的完整对象，不是经过截断的展示字段。</p><button class="button outline" data-download="selected">下载本县 JSON</button><pre id="jsonView"></pre>', 'JSON · ' + state.selected);
@@ -315,10 +317,19 @@
   async function init() {
     try {
       const embedded = $('zhou-inline-data'); let data;
-      if (embedded) data = JSON.parse(embedded.textContent);
+      if (embedded) {
+        if (embedded.dataset.compression === 'gzip') {
+          if (!window.DecompressionStream) throw new Error('离线文件使用无损压缩。请使用支持 DecompressionStream 的现代浏览器，或使用在线版。');
+          const binary = atob(embedded.textContent.trim()), bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          embedded.textContent = '';
+          const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+          data = JSON.parse(await new Response(stream).text());
+        } else data = JSON.parse(embedded.textContent);
+      }
       else {
         if (location.protocol === 'file:') throw new Error('这是源代码版。请用本地 HTTP 服务打开（在目录执行 python -m http.server 8000），或打开另附的离线单文件网页。');
-        const get = async name => { const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 30000); try { const res = await fetch('data/' + name + '.json', { signal: controller.signal }); if (!res.ok) throw new Error(`${name}.json 加载失败，HTTP ${res.status}`); return await res.json(); } finally { clearTimeout(timer); } };
+        const get = async name => { const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 120000); try { const res = await fetch('data/' + name + '.json?v=0.3', { signal: controller.signal }); if (!res.ok) throw new Error(`${name}.json 加载失败，HTTP ${res.status}`); return await res.json(); } finally { clearTimeout(timer); } };
         const [counties, connections] = await Promise.all([get('counties'), get('connections')]); data = { counties, connections };
       }
       model = M.create(data.counties, data.connections); prepareGeometry();
@@ -329,7 +340,7 @@
       $('resourceFilter').insertAdjacentHTML('beforeend', M.RESOURCES.map(r => `<option>${r}</option>`).join('') + '<option value="__none">未配置资源</option>');
       $('countyOptions').innerHTML = model.counties.map(c => `<option value="${esc(displayName(c))}"></option>`).join('');
       $('statCount').textContent = fmt(model.counties.length); $('statEdges').textContent = fmt(model.connections.length); $('statPop').textContent = fmt(model.counties.reduce((n, c) => n + c['初始人口'], 0) / 10000, 1) + '万';
-      const params = new URLSearchParams(location.hash.slice(1)); state.selected = model.byId.has(params.get('county')) ? params.get('county') : model.counties[0]['县编号']; state.layer = Object.keys(layerNames).includes(params.get('layer')) ? params.get('layer') : 'terrain';
+      const params = new URLSearchParams(location.hash.slice(1)); state.selected = model.byId.has(params.get('county')) ? params.get('county') : (model.counties.find(c => (c['资料依据']?.['历史地点'] || []).some(x => x.name === '洛邑')) || model.counties[0])['县编号']; state.layer = Object.keys(layerNames).includes(params.get('layer')) ? params.get('layer') : 'boundary';
       bind(); document.querySelector(`[data-layer="${state.layer}"]`).click(); filter(); select(state.selected); resize(); new ResizeObserver(resize).observe($('mapPanel'));
       $('routeFrom').value = displayName(selectedCounty());
       $('loading').hidden = true; document.body.dataset.ready = 'true';
