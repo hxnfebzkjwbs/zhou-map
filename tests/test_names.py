@@ -1,61 +1,37 @@
-import copy,re,sys,unittest
+"""v0.3 provenance tests replace obsolete synthetic-grid name-ID assertions."""
+import sys,unittest,json
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from shapely.geometry import shape,Point
-from build_map import read,ROOT
-from enrich_names import apply,choose_alias,digest,geometric_fingerprint
-
-class NameTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.c=read('data/counties.json')
-        cls.f=read('sources/modern_name_crosswalk.json')
-        cls.h=read('sources/historical_name_review.json')
-        cls.r=read('data/name_enrichment_report.json')
-    def test_every_county_named(self):
-        self.assertTrue(all(c['县名'].strip() and not re.search(r'EZG|\d{6,}',c['县名']) for c in self.c))
-    def test_crosswalk_ids(self):
-        ids=[r['县编号'] for r in self.f['rows']]
-        self.assertEqual(len(ids),len(set(ids)))
-        self.assertEqual(set(ids),{c['县编号'] for c in self.c})
-    def test_non_name_fields_unchanged(self):
-        frozen={r['县编号']:r['base_fingerprint'] for r in self.f['rows']}
-        for c in self.c:self.assertEqual(geometric_fingerprint(c),frozen[c['县编号']])
-    def test_all_name_points_in_cell(self):
-        rows={r['县编号']:r for r in self.f['rows']}
-        for c in self.c:
-            r=rows[c['县编号']]
-            self.assertTrue(r['命名参考点在县内'])
-            self.assertTrue(shape(c['县界']).covers(Point(r['source_record']['coordinates'])))
-    def test_sources_present(self):
-        for c in self.c:
-            e=c['资料依据']['地名考证']
-            self.assertEqual(e['现代地名来源'],f"https://www.geonames.org/{e['GeoNames编号']}/")
-            self.assertNotEqual(e['地名语言依据'].get('historic'),True)
-    def test_retained_ancient_names(self):
-        names={c['县编号']:c['县名'] for c in self.c}
-        for r in self.h['accepted']:
-            self.assertEqual(names[r['县编号']],r['name'])
-            self.assertTrue(r['sources'] and r['evidence'] and r['limitation'])
-    def test_historic_alias_excluded(self):
-        self.assertIsNone(choose_alias(None,['1','1','zh','古称','1','','','1','','']))
-    def test_colloquial_alias_excluded(self):
-        self.assertIsNone(choose_alias(None,['1','1','zh','俗称','1','','1','','','']))
-    def test_ended_alias_excluded(self):
-        self.assertIsNone(choose_alias(None,['1','1','zh','旧名','1','','','','1900','1950']))
-    def test_chinese_language_preference(self):
-        a=choose_alias(None,['1','1','','测试','','','','','',''])
-        b=choose_alias(a,['2','1','zh-Hans','现代名称','','','','','',''])
-        self.assertEqual(b['name'],'现代名称')
-    def test_idempotent(self):
-        counties=copy.deepcopy(self.c)
-        first=apply(counties,self.f,self.h);snapshot=copy.deepcopy(counties)
-        second=apply(counties,self.f,self.h)
-        self.assertEqual(counties,snapshot);self.assertEqual(first,second)
-    def test_changed_seat_rejected(self):
-        counties=copy.deepcopy(self.c);counties[0]['治所坐标'][0]+=.001
-        with self.assertRaises(ValueError):apply(counties,self.f,self.h)
-    def test_connections_unchanged(self):
-        self.assertEqual(digest(ROOT/'data/connections.json'),self.r['connections_sha256'])
-
+from rebuild_real_boundaries import ROOT,load,cid,geom_digest
+from real_names import alias_pick
+class RealBoundaryTests(unittest.TestCase):
+ @classmethod
+ def setUpClass(cls):
+  cls.c=load(ROOT/'data/counties.json');cls.f={cid(f):f for f in load(ROOT/'sources/real_boundaries/features.json')['features']}
+ def test_every_boundary_is_exact_source_geometry(self):
+  for c in self.c:self.assertEqual(c['县界'],self.f[c['县编号']]['geometry'])
+ def test_no_synthetic_ids_reused(self):
+  self.assertTrue(all(c['县编号'].startswith(('RCHN-','RPRK-','RMNG-')) for c in self.c))
+ def test_source_geometry_digest(self):
+  for c in self.c:self.assertEqual(c['资料依据']['边界依据']['几何SHA256'],geom_digest(self.f[c['县编号']]['geometry']))
+ def test_modern_epoch_is_explicit(self):
+  for c in self.c:
+   e=c['资料依据']['边界依据'];self.assertTrue(e['并非前770年边界']);self.assertIn(e['边界年代'],['2017','2019','2021'])
+ def test_boundary_license_present(self):
+  for c in self.c:self.assertTrue(c['资料依据']['边界依据']['来源许可'])
+ def test_old_ids_have_explicit_migration(self):
+  old=load(ROOT/'sources/legacy_grid_counties.json');mig=load(ROOT/'data/id_migration.json')
+  self.assertEqual({x['县编号'] for x in old},{x['旧县编号'] for x in mig['rows']})
+  self.assertTrue(all(y['新县编号'] in self.f for x in mig['rows'] for y in x['新区域']))
+ def test_old_grid_is_not_a_geometry_fallback(self):
+  self.assertEqual(len(self.f),len(self.c));self.assertEqual(load(ROOT/'data/real_boundary_report.json')['synthetic_grid_count'],0)
+ def test_source_conflicts_are_not_hidden(self):
+  r=load(ROOT/'data/real_boundary_report.json');issues=load(ROOT/'data/source_topology_issues.json')
+  self.assertEqual(r['source_geometry_overlap_pairs'],len(issues));self.assertTrue(all(x['重叠平方米']>1 for x in issues))
+ def test_historical_alias_rejected_as_modern(self):
+  self.assertIsNone(alias_pick(None,['1','1','zh','古称','1','','','1','','']))
+ def test_full_county_alias_preferred(self):
+  short=alias_pick(None,['1','1','zh','鹿寨','1','1','','','',''])
+  full=alias_pick(short,['2','1','zh','鹿寨县','','','','','',''])
+  self.assertEqual(full['name'],'鹿寨县')
 if __name__=='__main__':unittest.main()
