@@ -1,0 +1,36 @@
+{
+  "status": "PASS",
+  "county_count": 1195,
+  "connection_count": 3413,
+  "land_connected_components": 1,
+  "land_isolated_counties": [],
+  "land_routes": 3413,
+  "water_pairs": 140,
+  "one_way_water_pairs": 0,
+  "topology_overlap_m2": 0.0,
+  "design_extent_gap_m2": 0.0,
+  "outside_design_extent_m2": 0.002194659784436226,
+  "coverage_claim": "仅验证设计外框覆盖；不验证历史范围或史料真实性",
+  "checked": [
+    "字段与枚举",
+    "主键唯一",
+    "县对唯一与规范顺序",
+    "外键",
+    "正距离/null语义",
+    "陆路类型同步",
+    "七类面积精确闭合",
+    "椭球面积",
+    "有效多边形",
+    "治所位于县内",
+    "跨县面积重叠",
+    "设计范围覆盖",
+    "连通分量"
+  ],
+  "not_validated": [
+    "前770年县名与治所考证",
+    "前770年各国疆域",
+    "古代人口与土地统计",
+    "古道和河道实际线位与通行性",
+    "完整自然资源分布"
+  ]
+}

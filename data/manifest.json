@@ -1,0 +1,235 @@
+{
+  "version": "v0.2-named",
+  "status": "全域已命名的游戏原型；古名有依据者保留，其余现代地名回退",
+  "start_era": "BCE",
+  "start_year": 770,
+  "coordinate_reference_system": "EPSG:4326",
+  "coordinate_order": [
+    "longitude",
+    "latitude"
+  ],
+  "area_unit": "hectare",
+  "distance_unit": "kilometre",
+  "area_decimal_places": 2,
+  "distance_decimal_places": 3,
+  "county_count": 1195,
+  "connection_count": 3413,
+  "total_population_model": 10915293,
+  "total_area_ha": "318878047.82",
+  "land_routes": 3413,
+  "water_pairs": 140,
+  "polity_assignment": {
+    "周": 4,
+    "秦": 7,
+    "燕": 6,
+    "晋": 6,
+    "齐": 9,
+    "鲁": 4,
+    "宋": 4,
+    "卫": 4,
+    "陈": 3,
+    "蔡": 1,
+    "杞": 1,
+    "曹": 1,
+    "许": 1,
+    "郑": 1,
+    "邢": 2,
+    "虢": 1,
+    "虞": 1,
+    "楚": 5,
+    "随": 2,
+    "邓": 1,
+    "吴": 4,
+    "越": 4,
+    "蜀": 5,
+    "巴": 4,
+    "未分配国家": 1114
+  },
+  "historical_inspired_site_count": 24,
+  "generic_game_county_count": 0,
+  "failed_land_visibility_candidates": 0,
+  "sources": [
+    {
+      "id": "SRC-CHGIS",
+      "url": "https://gis.harvard.edu/china-historical-gis",
+      "supports": "主要时序范围前221年至1911年；不能直接提供前770年县界",
+      "used_as_geometry": false
+    },
+    {
+      "id": "SRC-LUOYI",
+      "url": "https://english.henan.gov.cn/2023/01-07/2668848.html",
+      "supports": "前770年东迁洛邑及王城遗址的大致现代位置",
+      "does_not_support": "本数据县界、人口、耕地、道路或精确坐标"
+    },
+    {
+      "id": "SRC-QIN",
+      "url": "https://www.gswbj.gov.cn/a/2025/04/01/24455.html",
+      "supports": "礼县与早期秦人西垂背景",
+      "does_not_support": "前770年疆域和精确治所坐标"
+    },
+    {
+      "id": "SRC-YAN",
+      "url": "https://www.bjfsh.gov.cn/ztzx/2025/gchx/kgyj/202505/t20250515_40088943.shtml",
+      "supports": "琉璃河功能变化与迁蓟的考古解释",
+      "does_not_support": "前770年已迁都的精确纪年结论"
+    },
+    {
+      "id": "SRC-TONGLUSHAN",
+      "url": "https://wlt.hubei.gov.cn/bmdt/szyw/hs/202505/t20250529_5671841.shtml",
+      "supports": "铜绿山铜铁矿与春秋战国采冶遗址",
+      "does_not_support": "前770年已开采或资源储量"
+    },
+    {
+      "id": "SRC-NE",
+      "url": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "supports": "Natural Earth数据公有领域许可",
+      "local_input": "pyogrio/tests/fixtures/naturalearth_lowres;上游版本未标明；已保存几何与校验散列"
+    },
+    {
+      "id": "SRC-YELLOW-RIVER",
+      "url": "https://5g.dahe.cn/news/202409191819574",
+      "supports": "古黄河北流及后期改道的背景；本项目河线仍为游戏设计",
+      "does_not_support": "逐点古河道坐标或实际通航性"
+    },
+    {
+      "id": "MODEL",
+      "url": null,
+      "supports": "本工程所有标为MODEL的数据均是显式游戏设定；不得用上述史料为其数值背书"
+    },
+    {
+      "id": "SRC-GEONAMES",
+      "url": "https://www.geonames.org/",
+      "license": "CC-BY-4.0",
+      "supports": "现代地名及地名参考点；逐县来源保存在资料依据；并非古代人口和疆域来源"
+    }
+  ],
+  "model": {
+    "description": "覆盖东周活动区及缓冲边地的设计外框；不宣称为考证疆域",
+    "grid_spacing_m": 55000,
+    "start_era": "BCE",
+    "start_year": 770,
+    "historical_horizon": "东周与春秋战国活动区的游戏解释，不仅周王室王畿",
+    "unassigned_state_meaning": "本剧本尚未配置所属国家；不表示无人区或一个统一部族国家",
+    "population_density_per_km2": {
+      "平原": 12,
+      "河谷": 8,
+      "丘陵": 3,
+      "山地": 0.8,
+      "湿地": 2
+    },
+    "population_factor": {
+      "assigned_state": 1.25,
+      "unassigned_state": 0.85
+    },
+    "road_detour_factors": {
+      "mountain": 1.55,
+      "hills_or_wetland": 1.35,
+      "other": 1.15
+    },
+    "water_distance_semantics": "统一县级水运节点之间、仅穿过本对两县的河网物理路径长度；双向航线长度相同，速度另行处理",
+    "landuse_fractions_note": "见scripts/build_map.py FRACTIONS；难利用土地包含原型中无法另列的永久水面；建设用地包括城乡聚落"
+  },
+  "warnings": [
+    "覆盖设计外框，不声称已核定整个东周历史疆域；现代低分辨率海岸线也不是前770年海岸线。",
+    "人口和七类土地面积均为模型数值，精确小数仅服务账目闭合，不代表史料精度。",
+    "陆路由邻接与粗地形假设生成，不是实测古道；河道为手工概化设计，不证明古代通航。",
+    "水路每县只选择一个内部水运节点；同县其他不连通水系不自动换乘。",
+    "黄河下游使用向河北北流的示意线，不采用现代山东入海线路；前770年具体线位仍未考定。",
+    "自然资源为剧本配置而非完整矿产普查；来源提及春秋采冶不能证明前770年已开采。",
+    "现代地名参考点与游戏治所分别记录，不能把现代命名参考点等同于古代治所。"
+  ],
+  "source_sha256": {
+    "historical_name_review.json": "76ec844945a9ce7b75b899e6b83087bd72ca01d81f6aaccae8caa96cd4946735",
+    "modern_name_crosswalk.json": "16a61de5f6741e5763cc567e034d7cb201e9ee9aa36a64a542415a0808b374af",
+    "scenario_bundle.json": "163a665646dc5e73a34d2e825da025f7a74cde22b8f7d6df376d5cbf107e25a5"
+  },
+  "name_enrichment": {
+    "version": "v0.2-named",
+    "county_count": 1195,
+    "connection_count": 3413,
+    "name_types": {
+      "有资料支持的古名": 4,
+      "现代地名": 1183,
+      "现代地名（原文）": 8
+    },
+    "counties_with_in_cell_modern_name_anchor": 1195,
+    "outside_anchor_counties": [],
+    "max_modern_anchor_distance_km": 45.602,
+    "placeholder_name_count": 0,
+    "duplicate_display_names": {
+      "会昌": 2,
+      "莲花": 2,
+      "武冈": 2,
+      "桐梓": 2,
+      "长沙": 2,
+      "康山": 2,
+      "华容": 2,
+      "石门": 2,
+      "金川": 2,
+      "文县": 2,
+      "阿坝": 2,
+      "卢氏": 2,
+      "东港": 2,
+      "吴起": 2,
+      "定边": 2,
+      "新民": 2,
+      "鄂托克": 2,
+      "察哈尔": 3,
+      "库伦": 2,
+      "围场": 2
+    },
+    "stable_fields_unchanged": true,
+    "connections_sha256": "ed166908aa770ac5ba1196a49c3f399f94dac2a302415e6b50a8fec2de04a7d2",
+    "rejected_or_deferred_historical_names": [
+      {
+        "县编号": "EZ000002",
+        "prior_name": "西垂",
+        "reason": "早期秦人西垂地域资料不等于已落实该模型治所；本版暂用现代参考名。"
+      },
+      {
+        "县编号": "EZ000004",
+        "prior_name": "翼",
+        "reason": "未完成前770年晋国治所与该点位置的逐条核验，先用现代参考名。"
+      },
+      {
+        "县编号": "EZ000014",
+        "prior_name": "郑地",
+        "reason": "郑东迁、虢郐控制时序与精确位置尚待核验；不把地域占位视为古县名。"
+      },
+      {
+        "县编号": "EZ000018",
+        "prior_name": "丹阳（剧本定位）",
+        "reason": "楚早期丹阳定位存在争议，按用户指示回退现代名。"
+      },
+      {
+        "县编号": "EZ000021",
+        "prior_name": "吴地",
+        "reason": "地域占位改为现代地名；不推定后世吴都在前770年已存在。"
+      },
+      {
+        "县编号": "EZ000022",
+        "prior_name": "越地",
+        "reason": "地域占位改为现代地名；不冒称已考证前770年越都。"
+      },
+      {
+        "县编号": "EZ000023",
+        "prior_name": "蜀地",
+        "reason": "地域占位改为现代地名；不冒称前770年成都为同名都城。"
+      },
+      {
+        "县编号": "EZ000024",
+        "prior_name": "巴地",
+        "reason": "地域占位改为现代地名；不冒称前770年巴都已在此。"
+      }
+    ],
+    "raw_source_sha256": {
+      "CN.zip": "ff60ed6ea5d5cf5c72994c75db1bbd35ff7be20551d875c901dc90c6590bfd6d",
+      "KP.zip": "e7807686e68e70567490da8650a3270274c868e3133ca3db7882a9f74e8485fe",
+      "MN.zip": "260884501da9d5dd02d26eb0a38402c7ef352d95267a3e35e081edb390e3e1a5",
+      "alternate-CN.zip": "f50d58739636ca4567fae82acf4871dea11b381bb53b68db3a586ca739e8d5e4",
+      "alternate-KP.zip": "389d40d0e95383c6e023ca6301299d8c0999c7906e0486735863791c77555143",
+      "alternate-MN.zip": "afe6f14835fa63a5cb75e8b22954cc28e9050db48942b5407e56582d8083bd76"
+    },
+    "scope": "完成全域命名资料接入；未改变县界、治所、交通、人口、土地、资源及国家归属。现代名称不是现代行政边界。"
+  }
+}

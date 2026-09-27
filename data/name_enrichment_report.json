@@ -1,0 +1,89 @@
+{
+  "version": "v0.2-named",
+  "county_count": 1195,
+  "connection_count": 3413,
+  "name_types": {
+    "有资料支持的古名": 4,
+    "现代地名": 1183,
+    "现代地名（原文）": 8
+  },
+  "counties_with_in_cell_modern_name_anchor": 1195,
+  "outside_anchor_counties": [],
+  "max_modern_anchor_distance_km": 45.602,
+  "placeholder_name_count": 0,
+  "duplicate_display_names": {
+    "会昌": 2,
+    "莲花": 2,
+    "武冈": 2,
+    "桐梓": 2,
+    "长沙": 2,
+    "康山": 2,
+    "华容": 2,
+    "石门": 2,
+    "金川": 2,
+    "文县": 2,
+    "阿坝": 2,
+    "卢氏": 2,
+    "东港": 2,
+    "吴起": 2,
+    "定边": 2,
+    "新民": 2,
+    "鄂托克": 2,
+    "察哈尔": 3,
+    "库伦": 2,
+    "围场": 2
+  },
+  "stable_fields_unchanged": true,
+  "connections_sha256": "ed166908aa770ac5ba1196a49c3f399f94dac2a302415e6b50a8fec2de04a7d2",
+  "rejected_or_deferred_historical_names": [
+    {
+      "县编号": "EZ000002",
+      "prior_name": "西垂",
+      "reason": "早期秦人西垂地域资料不等于已落实该模型治所；本版暂用现代参考名。"
+    },
+    {
+      "县编号": "EZ000004",
+      "prior_name": "翼",
+      "reason": "未完成前770年晋国治所与该点位置的逐条核验，先用现代参考名。"
+    },
+    {
+      "县编号": "EZ000014",
+      "prior_name": "郑地",
+      "reason": "郑东迁、虢郐控制时序与精确位置尚待核验；不把地域占位视为古县名。"
+    },
+    {
+      "县编号": "EZ000018",
+      "prior_name": "丹阳（剧本定位）",
+      "reason": "楚早期丹阳定位存在争议，按用户指示回退现代名。"
+    },
+    {
+      "县编号": "EZ000021",
+      "prior_name": "吴地",
+      "reason": "地域占位改为现代地名；不推定后世吴都在前770年已存在。"
+    },
+    {
+      "县编号": "EZ000022",
+      "prior_name": "越地",
+      "reason": "地域占位改为现代地名；不冒称已考证前770年越都。"
+    },
+    {
+      "县编号": "EZ000023",
+      "prior_name": "蜀地",
+      "reason": "地域占位改为现代地名；不冒称前770年成都为同名都城。"
+    },
+    {
+      "县编号": "EZ000024",
+      "prior_name": "巴地",
+      "reason": "地域占位改为现代地名；不冒称前770年巴都已在此。"
+    }
+  ],
+  "raw_source_sha256": {
+    "CN.zip": "ff60ed6ea5d5cf5c72994c75db1bbd35ff7be20551d875c901dc90c6590bfd6d",
+    "KP.zip": "e7807686e68e70567490da8650a3270274c868e3133ca3db7882a9f74e8485fe",
+    "MN.zip": "260884501da9d5dd02d26eb0a38402c7ef352d95267a3e35e081edb390e3e1a5",
+    "alternate-CN.zip": "f50d58739636ca4567fae82acf4871dea11b381bb53b68db3a586ca739e8d5e4",
+    "alternate-KP.zip": "389d40d0e95383c6e023ca6301299d8c0999c7906e0486735863791c77555143",
+    "alternate-MN.zip": "afe6f14835fa63a5cb75e8b22954cc28e9050db48942b5407e56582d8083bd76"
+  },
+  "scope": "完成全域命名资料接入；未改变县界、治所、交通、人口、土地、资源及国家归属。现代名称不是现代行政边界。"
+}
