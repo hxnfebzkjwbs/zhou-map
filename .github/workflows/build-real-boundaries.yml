@@ -16,13 +16,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13.5'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install geometry and browser test dependencies
+      - name: Install pinned geometry and browser test dependencies
         run: |
-          python -m pip install -r requirements.txt playwright==1.57.0
+          python -m pip install -r requirements.txt numpy==2.3.5 playwright==1.57.0
           python -m playwright install --with-deps chromium
       - name: Acquire pinned source snapshots on first build only
         run: |
@@ -65,7 +65,6 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           p=Path('scripts/prepare_real_viewer.py');s=p.read_text()
-          # Match the exact assertion labels in the previously published viewer tests.
           substitutions={
             "Loads 1195 source counties":"Loads 1195 counties",
             "Loads 3413 source county pairs":"Loads 3413 county pairs",
@@ -77,24 +76,24 @@ jobs:
           replacement='''("page.set_content(HTML, wait_until='load')", "page.set_content(HTML, wait_until='load', timeout=120000)"),
             ('page.wait_for_function("document.body.dataset.ready === \\'true\\'")', 'page.wait_for_function("document.body.dataset.ready === \\'true\\'", timeout=120000)'),'''
           s=s.replace("('timeout=30000','timeout=120000'),",replacement)
-          p.write_text(s)
-          compile(s,str(p),'exec')
+          p.write_text(s);compile(s,str(p),'exec')
           PY
           python scripts/prepare_real_viewer.py
       - name: Verify offline rebuild and exact runtime outputs
         run: |
           python - <<'PY'
-          import hashlib,json,subprocess
+          import hashlib,json,subprocess,sys,numpy,shapely,pyproj
           from pathlib import Path
           names=['counties.json','connections.json','id_migration.json','county_id_registry.json']
           def hashes():return {n:hashlib.sha256((Path('data')/n).read_bytes()).hexdigest() for n in names}
-          first=hashes()
-          subprocess.run(['python','scripts/rebuild_real_boundaries.py'],check=True)
-          second=hashes()
+          first=hashes();subprocess.run(['python','scripts/rebuild_real_boundaries.py'],check=True);second=hashes()
           assert first==second,'Offline rebuild changed runtime data'
           expected={'counties.json':'cd85d1fc5fb7f33ec6fc0122f6ea56eb1ede05f73109db34c003c4e06e7dda69','connections.json':'e6896b782b3d6609cb863a91e5b48a4e22a4ac91e0caf241afe30b09d6d9b980','id_migration.json':'19d961dc2b28730c3ed6ada8e3f1832ea829f151d991e7e7eefb658f0624d877'}
-          assert all(second[k]==v for k,v in expected.items()),'Published data differ from locally verified source-boundary build'
-          Path('data/reproducibility_report.json').write_text(json.dumps({'status':'PASS','offline_rebuild_byte_identical':True,'matches_locally_verified_data':True,'output_sha256':second},indent=2)+'\n')
+          print('Runtime:',sys.version,numpy.__version__,shapely.__version__,shapely.geos_version_string,pyproj.proj_version_str)
+          print('Output hashes:',json.dumps(second,indent=2),flush=True)
+          matches=all(second[k]==v for k,v in expected.items())
+          Path('data/reproducibility_report.json').write_text(json.dumps({'status':'PASS' if matches else 'FAIL','offline_rebuild_byte_identical':True,'matches_locally_verified_data':matches,'output_sha256':second,'expected_sha256':expected},indent=2)+'\n')
+          assert matches,'Published data differ from locally verified source-boundary build'
           PY
       - name: Validate contract and geometry identity; report source conflicts
         run: |
@@ -131,7 +130,8 @@ jobs:
             git push
           fi
           git rev-parse HEAD
-      - name: Retain complete JSON, atlas and verification artifacts
+      - name: Retain JSON, atlas and verification diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: zhou-real-boundaries-v0.3
