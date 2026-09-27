@@ -1,78 +1,73 @@
-# zhou-map
+# 东周舆图 · v0.3真实现代县界版
 
-公元前770年开局的战略游戏地图数据。当前数据版本：**v0.2-named**；已加入可交互的**东周舆图网页**。
+战略游戏开局为公元前770年。**县界已由规则六边形全部替换为有来源的现代行政区多边形；不是前770年县界复原，也不是2026年现行行政区划或官方勘界认证。**
 
-## 网页入口
+## 网页
 
-根目录 `index.html` 直接读取 `data/counties.json` 和 `data/connections.json`，无需前端构建、CDN、外部字体或地图平台。
+GitHub Pages：https://hxnfebzkjwbs.github.io/zhou-map/
+
+入口为根目录 `index.html`，从main的 `/(root)` 发布。右上角显示v0.3，默认“真实行政边界”图层；加载完成显示2043个分区。县详情直接显示边界来源及年代。若仍显示v0.2，请在Pages部署成功后强制刷新。
+
+支持地图点选、缩放平移、名称/来源原文/历史地点别名搜索、国家/地形/资源筛选、JSON下载，以及独立的陆路/车行/水路寻路。网页直接读取两张JSON，不另造展示地图。
 
 ```bash
+# 本地打开源码版
 python -m http.server 8000
-```
+# 在浏览器访问 http://localhost:8000/
 
-在浏览器访问 `http://localhost:8000/`。也可生成无需服务器、可双击打开的离线单文件：
-
-```bash
+# 打包可直接打开的离线单文件
 python scripts/build_viewer.py --output dist
 ```
 
-打开 `dist/zhou-atlas-offline.html`。新的网页包只分发两张 JSON 数据，不附 Excel、CSV 或独立 GeoJSON。旧版派生文件保留作工程历史，不是网页输入。
+离线HTML使用gzip无损压缩内嵌相同JSON，保留全部县界坐标；需要支持DecompressionStream的现代浏览器，不需要服务器、CDN、地图平台或额外字体。
 
-支持地图缩放和平移、地名搜索、国家/地形/资源筛选、四种着色、县详情、来源查看、JSON 导出，以及独立的陆路/车行/单向水路最短路径。地图连线是连接示意，不是实际古道河道。桌面三栏、手机抽屉布局；完整说明见 [网页使用说明](docs/web-viewer.md)。
+## 两张运行时JSON
 
-已通过24项模型测试和37项浏览器检查；自动测试由 `Validate web atlas` 工作流运行。源码提交不表示已经启用公网托管。
+- `data/counties.json`：2043个行政单元，保持县表原字段。
+- `data/connections.json`：5733对直接连接，其中239对另有模型水路。
 
-## 数据入口
+县界包含1,248,246个坐标点，与所选源几何逐条完全一致。没有Voronoi、六边形生成、随机扰动、平滑、简化或县域裁切。只纳入与旧地图设计范围相交的完整单元。边缘因此与旧外框不同，不能把旧范围差异理解为已考定的古代疆域。
 
-运行时仍然只使用两张基础表：
+坐标为WGS84，经度在前。面积单位公顷，七类土地以0.01公顷精确闭合。存在通道的距离大于0；无通道为null，没有陆路时通行类型也为null。每对县只有一行，A<B，水路方向分别记录。数据发布不依赖Excel、CSV或单独GeoJSON。
 
-- `data/counties.json`：县表，1195行。
-- `data/connections.json`：县际距离表，3413行。
+## 来源
 
-原工程的CSV为`data/县表.csv`和`data/县际距离表.csv`。`data/counties.geojson`只是县表的另一种表示；来源对照、改名日志和校验报告不是第三张游戏运行表。
+|来源|年代|本图单元数|许可|
+|---|---:|---:|---|
+|geoBoundaries CHN ADM3；Lee Beryman / OpenStreetMap contributors|2017|1997|ODbL 1.0|
+|geoBoundaries PRK ADM2；World Food Programme / OCHA ROAP|2019|46|CC BY 3.0 IGO|
 
-本版已将全部区域代号替换为来源支持的地名：4个保留古名、1183个使用现代汉字地名、8个保留地名库原文。古名未获本轮核验不表示该古名不存在，只表示本版依用户要求回退现代名称。现代名称采用GeoNames参考，不宣称为官方现行行政区划认证。
+原始完整精度数据固定上游提交 `9469f09`。源名称、源单元ID、边界年份、下载网址、许可、几何SHA256均在每县 `资料依据.边界依据` 中。GeoNames仅用于县内精确名称匹配，适用CC BY 4.0。1921个显示名称含汉字，其余保留来源原文，不任意借用邻近城镇名称。
 
-地名升级不改变任何县编号、县界、游戏治所、人口、土地、地形、资源、归属或交通距离。现代命名参考点与游戏治所分别记录，不能混为古代真实治所。所有1195个现代命名参考点均位于对应游戏分区内。
+完整归属、处理说明和许可链接见 `NOTICE.md`。OSM派生数据库按ODbL提供，保留其他源的署名和许可。源国别代码不等于前770年国家归属。
 
-完整说明见`docs/v0.2-named.md`。机器检查结果见`data/validation_report.json`、`data/test_report.json`及`data/reproducibility_report.json`。
+## 哪些仍是游戏模型
 
-## 重建地图数据
+真实的是来源行政多边形，不是所有属性。人口、七类土地、粗地形、开局国家和资源仍采用明确标注的游戏模型或旧模型的空间重分配。游戏治所不是已核实的古治所或现代政府地址。
 
-仅使用网页时不必重建地图数据。Python 3.11或更新版本，安装依赖之后，使用已冻结的地名对照表，无需联网即可重建：
+连接按真实县域共边重新建立，但车行分类、绕行距离和水运走廊仍是模型，不是已考证古道。地图连线仅示意连接。陆路图有6个连通分量，没有用虚构道路强行连成一片。
+
+## 已知误差与编号变化
+
+源数据之间有12对多边形面积重叠，合计约13.595平方公里，详见 `data/source_topology_issues.json`。保持源几何并报告，不擅自改界，也不声称“零重叠”。CHN元数据标称2867个单元，实际源文件2864个，该差异也已记录。
+
+新RCHN/RPRK编号不复用旧EZ六边形编号。`data/id_migration.json`覆盖全部1195个旧分区，给出多对多相交面积，仅用于迁移审查，不自动决定部队、城市或国界归属。
+
+## 构建与验证
+
+精确复现使用 **Python3.13.5** 及锁定依赖。不同Python版本的浮点累加可能改变模型数值的末位；源县界坐标不经过数值重算。
 
 ```bash
 python -m pip install -r requirements.txt
-python scripts/build_map.py
-python scripts/enrich_names.py
-python scripts/validate.py
+python scripts/rebuild_real_boundaries.py
+python scripts/validate_real_boundaries.py
 python -m unittest discover -s tests -v
+node --test tests/web-model.test.cjs
+python scripts/build_viewer.py --output dist
 ```
 
-初次接入或有意更新地名库时才使用`--gazetteer-dir <目录>`。目录需含CN.zip、KP.zip、MN.zip及alternate-CN.zip、alternate-KP.zip、alternate-MN.zip。`--refresh`会重新生成来源对照，应单独审查结果；日常重建不要使用。原始下载哈希和每条采用的源记录保存在`sources/modern_name_crosswalk.json`。
+冻结输入位于 `sources/real_boundaries/`，安装依赖后可离线重建。旧网格自动生成工作流已退役，旧CLI不再重建六边形。
 
-GitHub Actions的`Build named map`负责构建、验证、运行测试，然后才提交生成数据。取得第三方数据使用公开下载，无需外部账号密钥。
+25项Python测试、24项网页模型测试、39项桌面/手机浏览器检查通过。县表、距离表及编号迁移表已在GitHub Actions中与本地验证输出逐字节对照，并再次离线重建确认一致。整体质量状态是 **PASS_WITH_SOURCE_TOPOLOGY_WARNINGS**：数据契约与源几何一致性通过，来源拼接误差仍明确保留。
 
-## 两表契约
-
-县表字段：县编号、县名、县界、治所坐标、总面积、地形、初始人口、初始土地用途、自然资源、开局行政归属、资料依据。
-
-县际距离表字段：县 A 编号、县 B 编号、陆路距离、陆路通行类型、水路 A→B 距离、水路 B→A 距离。
-
-- 县编号唯一且固定；县是游戏空间单元，不表示前770年已经普遍实行郡县制。
-- 坐标为WGS84，经度在前、纬度在后。县界为GeoJSON Polygon或MultiPolygon。
-- 面积单位公顷；耕地、休耕地、可开垦地、牧地、林地、建设用地、难利用土地七类互斥，合计严格等于总面积。
-- 地形枚举：平原、河谷、丘陵、山地、湿地。
-- 资源枚举：铜矿、铅（锡）矿、铁矿、金（银）矿、煤矿、石料、陶土、盐源、玉石。无设定资源为`[]`，不记录储量。
-- 距离单位公里；存在通道必须大于0。不存在通道使用JSON `null`或旧版CSV空单元格，绝不以0代替。无陆路时通行类型也为空。
-- 每对县仅一行，A编号小于B编号；交换县顺序时同时交换水路方向。陆路类型只可为能走车、不能走车。
-- 陆路双向共用距离，水路两方向独立。流速不是物理距离。非直接连接的县经中间县寻路。
-- 未设置的郡为`null`，不套用后世郡名。未分配国家不表示无人居住。
-
-## 来源与局限
-
-地名资料：GeoNames，CC BY 4.0，https://www.geonames.org/ 。数据格式和许可：https://download.geonames.org/export/dump/readme.txt 。署名和加工说明见`NOTICE.md`。
-
-保留古名的材料、日期和适用范围见`sources/historical_name_review.json`；每县的`资料依据.地名考证`可直接追溯到来源URL。
-
-县界、人口、土地用途、粗略地形、国家核心区和道路仍是v0.1游戏模型，不是历史复原。地图设计外框尚未完成整个东周历史范围的逐段核定。现代海岸和地名不等于前770年的海岸和地名。结构校验通过不等于历史准确性已获验证。
+机器报告：`data/real_boundary_report.json`、`data/validation_report.json`、`data/reproducibility_report.json`、`data/test_report.json`、`data/web_ui_report.json`。更多说明见 `docs/v0.3-real-boundaries.md` 和 `docs/web-viewer.md`。
