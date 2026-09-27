@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#172c31">
+  <meta name="description" content="公元前770年战略游戏地图：县级分区、人口土地、资源与陆水连接。直接读取两张JSON表。">
+  <title>东周舆图 · 公元前770年</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%23172c31'/%3E%3Cpath d='M12 35V12h24v23M17 19h14M24 13v14M17 25h14v8H17Z' fill='none' stroke='%23dfc593' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="web/style.css">
+  <script defer src="web/model.js"></script>
+  <script defer src="web/app.js"></script>
+</head>
+<body>
+<svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Zm6-2v16M15 5v16"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><circle cx="5" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 5h9a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h9"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 10 5-10 5L2 8Zm-10 9 10 5 10-5M2 17l10 5 10-5"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/></symbol>
+</defs></svg>
+<a class="skip" href="#search">跳到地名搜索</a>
+<header class="topbar">
+  <a class="brand" href="#" id="brandHome" aria-label="东周舆图，回到全图"><span class="seal" aria-hidden="true">周</span><span><strong>东周舆图</strong><small>ZHOU ATLAS</small></span></a>
+  <div class="era"><b>770</b><span>公元前<br>BCE</span></div>
+  <nav class="main-nav" aria-label="主导航">
+    <button class="nav-btn active" id="navMap"><svg><use href="#i-map"/></svg><span>地图总览</span></button>
+    <button class="nav-btn" id="navRoute"><svg><use href="#i-route"/></svg><span>连接寻路</span></button>
+    <button class="nav-btn" id="navAbout"><svg><use href="#i-info"/></svg><span>数据说明</span></button>
+  </nav>
+  <div class="header-actions"><span class="version">v0.2 <i></i> 游戏模型</span><button class="button outline" id="openExport"><svg><use href="#i-download"/></svg><span>JSON 数据</span></button></div>
+</header>
+<main class="workspace">
+  <aside class="sidebar" id="sidebar" aria-label="地图筛选和寻路">
+    <div class="panel-mobile-title">地图工具<button class="icon-button close-panel" data-close="sidebar" aria-label="关闭工具"><svg><use href="#i-close"/></svg></button></div>
+    <div class="sidebar-scroll">
+      <section class="search-section">
+        <div class="eyebrow">EXPLORE THE MAP</div><h1>山川之间，诸国之地。</h1>
+        <label class="search-box"><svg><use href="#i-search"/></svg><input id="search" type="search" placeholder="搜索县名、现代名或编号" autocomplete="off" aria-label="搜索县名、现代参考名或编号"><kbd>/</kbd></label>
+      </section>
+      <section id="exploreControls">
+        <div class="section-title"><h2>地图图层</h2><span>COLOR BY</span></div>
+        <div class="layer-grid" role="group" aria-label="地图着色方式">
+          <button class="layer active" data-layer="terrain" aria-pressed="true"><span>△</span>地形</button><button class="layer" data-layer="country" aria-pressed="false"><span>⚑</span>国家</button><button class="layer" data-layer="population" aria-pressed="false"><span>▥</span>人口</button><button class="layer" data-layer="resource" aria-pressed="false"><span>◇</span>资源</button>
+        </div>
+        <div class="filters"><label>开局国家<select id="countryFilter"><option value="">全部国家与未分配地区</option></select></label><div class="filter-row"><label>地形<select id="terrainFilter"><option value="">全部地形</option></select></label><label>资源<select id="resourceFilter"><option value="">全部资源</option></select></label></div></div>
+        <div class="switches"><label><input type="checkbox" id="showLand"><span class="switch"></span><i class="line-key land"></i>全部陆路</label><label><input type="checkbox" id="showWater" checked><span class="switch"></span><i class="line-key water"></i>全部水路</label><label><input type="checkbox" id="showNames" checked><span class="switch"></span>地名标注</label></div>
+      </section>
+      <section id="routePanel" hidden>
+        <div class="section-title"><h2>县际寻路</h2><button class="text-button" id="clearRoute">清除</button></div>
+        <div class="route-inputs"><label><span class="route-dot start">起</span><input id="routeFrom" list="countyOptions" placeholder="选择起点县" aria-label="路线起点"></label><button class="swap" id="swapRoute" aria-label="交换起终点">⇅</button><label><span class="route-dot end">终</span><input id="routeTo" list="countyOptions" placeholder="选择终点县" aria-label="路线终点"></label></div>
+        <datalist id="countyOptions"></datalist>
+        <label class="route-mode-label">通行方式<select id="routeMode"><option value="land">陆路 · 所有可步行道路</option><option value="cart">车行 · 仅能走车的道路</option><option value="water">水路 · 严格按通航方向</option></select></label>
+        <button class="button primary full" id="calculateRoute"><svg><use href="#i-route"/></svg>计算最短路程</button>
+        <p class="subtle route-hint">可在县详情中设置起终点。按表内公里数累计，不混用陆路和水路。</p>
+        <div id="routeResult" aria-live="polite"></div>
+      </section>
+      <section class="county-directory"><div class="section-title"><h2>分区索引 <span id="matchCount">—</span></h2><button class="text-button" id="resetFilters">重置筛选</button></div><div id="countyList" class="county-list" aria-label="匹配的县"></div><button id="moreCounties" class="text-button more" hidden>显示更多</button></section>
+    </div>
+    <footer class="sidebar-footer"><span class="status-dot"></span><span>两张 JSON，统一的数据源</span><button id="aboutFooter" aria-label="查看数据说明">↗</button></footer>
+  </aside>
+  <section class="map-panel" id="mapPanel" aria-label="交互地图">
+    <canvas id="map" tabindex="0" aria-label="东周游戏分区地图。拖动平移，滚轮缩放。键盘方向键平移，加减键缩放，Home显示全图。可通过左侧搜索与索引选择分区。"></canvas>
+    <div class="map-topline"><div><div class="eyebrow">EASTERN ZHOU · STRATEGY MAP</div><h2 id="mapTitle">东周全域</h2><p><span id="visibleCount">—</span> 个分区<span class="dot-sep">·</span><span id="layerTitle">地形视图</span></p></div><button class="map-pill" id="modelNote"><span></span>游戏分区 · 非考证疆界<svg><use href="#i-info"/></svg></button></div>
+    <div class="map-metrics" aria-label="全图数据统计"><div><span>全图分区</span><b id="statCount">—</b></div><div><span>直接连接</span><b id="statEdges">—</b></div><div><span>模型人口</span><b id="statPop">—</b></div></div>
+    <div class="map-controls"><button id="zoomIn" title="放大 (+)" aria-label="放大">+</button><button id="zoomOut" title="缩小 (-)" aria-label="缩小">−</button><span></span><button id="fitMap" title="全图 (Home)" aria-label="显示全图"><svg><use href="#i-map"/></svg></button><button id="focusSelected" title="定位选中县" aria-label="定位选中县"><svg><use href="#i-target"/></svg></button></div>
+    <div class="compass" aria-hidden="true"><b>N</b><svg viewBox="0 0 26 36"><path d="M13 2 23 30 13 24 3 30Z"/></svg></div>
+    <div class="legend" id="legend" aria-label="地图图例"></div>
+    <div class="scale-wrap"><div id="scaleBar"></div><span id="scaleText">约 100 公里</span></div>
+    <div class="map-bottom"><span id="coordinates">WGS84 · 经度 / 纬度</span><span>连线仅示意连接，非实际道路或河道</span></div>
+    <div id="tooltip" class="map-tooltip" hidden></div>
+    <div id="loading" class="loading"><div class="loading-mark">周</div><h2>正在展开舆图</h2><p>读取县表与县际距离表…</p><div class="load-line"></div></div>
+    <div class="mobile-tools"><button id="mobileFilters"><svg><use href="#i-layers"/></svg>筛选与寻路</button><button id="mobileDetails"><svg><use href="#i-pin"/></svg><span id="mobileName">县详情</span></button></div>
+  </section>
+  <aside class="inspector" id="inspector" aria-label="所选县详情">
+    <div class="inspector-heading"><div class="eyebrow">COUNTY DOSSIER</div><button class="icon-button close-panel" data-close="inspector" aria-label="关闭详情"><svg><use href="#i-close"/></svg></button><div class="county-title"><h2 id="countyName">洛邑</h2><span class="name-badge" id="nameBadge">—</span></div><div class="county-meta"><span id="countyId">EZ000001</span><button class="text-button" id="viewCountyJSON">查看 JSON ↗</button></div></div>
+    <div class="detail-tabs" role="tablist" aria-label="县详情分页"><button class="active" role="tab" data-detail="overview" aria-selected="true" aria-controls="detailBody">概况</button><button role="tab" data-detail="connections" aria-selected="false" aria-controls="detailBody">连接 <span id="neighborCount">—</span></button><button role="tab" data-detail="sources" aria-selected="false" aria-controls="detailBody">资料依据</button></div>
+    <div id="detailBody" class="detail-body" role="tabpanel"></div>
+    <div class="inspector-actions"><button class="button outline" id="setStart"><span class="route-dot start">起</span>设为起点</button><button class="button primary" id="setEnd"><span class="route-dot end">终</span>设为终点</button></div>
+  </aside>
+</main>
+<div id="drawerShade" class="drawer-shade" hidden></div>
+<dialog id="modal"><header><div><div class="eyebrow" id="modalEyebrow">ZHOU ATLAS</div><h2 id="modalTitle">数据说明</h2></div><button class="icon-button" id="closeModal" aria-label="关闭弹窗"><svg><use href="#i-close"/></svg></button></header><div id="modalBody"></div></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+<noscript>此地图需要启用 JavaScript。原始数据位于 data/counties.json 和 data/connections.json。</noscript>
+</body>
+</html>
