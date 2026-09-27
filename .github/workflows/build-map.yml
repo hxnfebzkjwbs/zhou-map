@@ -1,0 +1,114 @@
+name: Build named map
+on:
+  push:
+    paths:
+      - '.github/workflows/build-map.yml'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'requirements.txt'
+      - 'sources/scenario_bundle.json'
+      - 'sources/historical_name_review.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: named-map-build
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned geometry and naming dependencies
+        run: python -m pip install -r requirements.txt numpy==2.3.5
+      - name: Build unchanged base game cells
+        run: |
+          python scripts/build_map.py
+          mkdir -p /tmp/map-baseline
+          cp data/counties.json data/connections.json /tmp/map-baseline/
+      - name: Enrich names from frozen crosswalk or verified first snapshot
+        shell: bash
+        run: |
+          if [ ! -f sources/modern_name_crosswalk.json ]; then
+            mkdir -p gazetteer
+            for cc in CN KP MN; do
+              curl --fail --location --retry 3 --max-time 180 "https://download.geonames.org/export/dump/${cc}.zip" -o "gazetteer/${cc}.zip"
+              curl --fail --location --retry 3 --max-time 180 "https://download.geonames.org/export/dump/alternatenames/${cc}.zip" -o "gazetteer/alternate-${cc}.zip"
+            done
+            cat > gazetteer/SHA256SUMS <<'HASHES'
+          ff60ed6ea5d5cf5c72994c75db1bbd35ff7be20551d875c901dc90c6590bfd6d  CN.zip
+          e7807686e68e70567490da8650a3270274c868e3133ca3db7882a9f74e8485fe  KP.zip
+          260884501da9d5dd02d26eb0a38402c7ef352d95267a3e35e081edb390e3e1a5  MN.zip
+          f50d58739636ca4567fae82acf4871dea11b381bb53b68db3a586ca739e8d5e4  alternate-CN.zip
+          389d40d0e95383c6e023ca6301299d8c0999c7906e0486735863791c77555143  alternate-KP.zip
+          afe6f14835fa63a5cb75e8b22954cc28e9050db48942b5407e56582d8083bd76  alternate-MN.zip
+          HASHES
+            (cd gazetteer && sha256sum -c SHA256SUMS)
+            python scripts/enrich_names.py --gazetteer-dir gazetteer
+          else
+            python scripts/enrich_names.py
+          fi
+      - name: Check spatial contract and regression tests
+        run: |
+          python scripts/validate.py
+          python - <<'PY'
+          import json,sys,unittest
+          suite=unittest.defaultTestLoader.discover('tests')
+          result=unittest.TextTestRunner(verbosity=2).run(suite)
+          report={'status':'PASS' if result.wasSuccessful() else 'FAIL','tests_run':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),'skipped':len(result.skipped)}
+          open('data/test_report.json','w').write(json.dumps(report,indent=2)+'\n')
+          if not result.wasSuccessful():sys.exit(1)
+          PY
+      - name: Prove stable non-name fields and offline rebuild
+        run: |
+          python - <<'PY'
+          import hashlib,json,subprocess
+          from pathlib import Path
+          def load(p):return json.loads(Path(p).read_text())
+          def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+          def stable(c):return {k:v for k,v in c.items() if k not in ('县名','资料依据')}
+          old=load('/tmp/map-baseline/counties.json');new=load('data/counties.json')
+          assert [stable(c) for c in old]==[stable(c) for c in new]
+          assert sha('/tmp/map-baseline/connections.json')==sha('data/connections.json')
+          files=['counties.json','connections.json','counties.geojson','县表.csv','县际距离表.csv','name_changes.csv']
+          first={n:sha('data/'+n) for n in files}
+          subprocess.run(['python','scripts/build_map.py'],check=True)
+          subprocess.run(['python','scripts/enrich_names.py'],check=True)
+          subprocess.run(['python','scripts/validate.py'],check=True)
+          second={n:sha('data/'+n) for n in files}
+          assert first==second,(first,second)
+          report={'status':'PASS','county_count':len(new),'renamed_count':sum(a['县名']!=b['县名'] for a,b in zip(old,new)),
+          'all_non_name_fields_unchanged':True,'connections_byte_identical_to_v01':True,'offline_rebuild_byte_identical':True,'output_sha256':second}
+          Path('data/reproducibility_report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          PY
+      - name: Commit verified complete tables and frozen provenance
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data sources/modern_name_crosswalk.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish verified v0.2 named counties, connections and frozen source crosswalk'
+            git push
+          fi
+          git rev-parse HEAD
+      - name: Deliver source and generated data archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: zhou-map-v0.2-named
+          path: |
+            data/
+            sources/
+            scripts/
+            tests/
+            docs/
+            README.md
+            requirements.txt
+            NOTICE.md
+            .github/workflows/
+          include-hidden-files: true
+          retention-days: 30
